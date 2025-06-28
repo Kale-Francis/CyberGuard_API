@@ -137,3 +137,6 @@ dist
 
 # Raw data
 *.csv
+
+# Virtual enviroment
+venv/
