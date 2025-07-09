@@ -1,64 +1,95 @@
-""" Import required libraries """
-
-import panda as pd 
+import pandas as pd
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
+from datasets import Dataset
 import torch
-from kafka import KafkaConsumer
-import pymongo
-from fastapi import FastApi
-from datasets import dataset
-
-""" Function to load and train the transformer."""
 
 def train_model(train_file, test_file):
-    """ 
-    Holds trainig logic: 
-    train_file(str) = "backend/data/preprocessed/train.csv"
-    test_file(str) = "backend/data/preprocessed/test.csv"  
     """
+    Train a Hugging Face transformer model for anomaly detection.
+    Args:
+        train_file (str): Path to preprocessed training CSV (e.g., 'backend/data/preprocessed/train.csv')
+        test_file (str): Path to preprocessed test CSV (e.g., 'backend/data/preprocessed/test.csv')
+    """
+    # Load preprocessed data
+    print("Loading data...")
+    train_df = pd.read_csv(train_file).head(10000)
+    test_df = pd.read_csv(test_file).head(5000)
 
-    #Load preprocessed Data 
-    train_df = pd.read_csv(train_file)
-    test_df = pd.read_csv(test_file)
+    # Prepare features and labels
+    X_train = train_df.drop('label', axis=1)
+    y_train = train_df['label']
+    X_test = test_df.drop('label', axis=1)
+    y_test = test_df['label']
 
-    #Prepare features and labels
-    train_df.drop('label', axis=1)
-    test_df.drop('label', axis=1)
-    train_df['label']    
-    test_df['label']
+    # Convert to Hugging Face Dataset
+    train_dataset = Dataset.from_pandas(train_df)
+    test_dataset = Dataset.from_pandas(test_df)
 
-    #Convert to HuggingFace Dataset
-    Dataset.from_pandas(train_df)
-    Dataset.from_pandas(test_df)
+    # Confirm data loading
+    print(f"Loaded train with {len(train_df)} rows, test with {len(test_df)} rows")
 
-    #Confirm Data Loading
-    len(train_df)
-    len(test_df)
-    print(f"Loaded train with{rows}rows, test with{rows}rows.")
+    # Load pretrained model and tokenizer
+    model_name = "bert-base-uncased"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
 
-    #Load Pretrained MOdel and Tokenizer
-    AutoTokenizer.from_pretrained("bert-base-uncased")
-    AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
-    
-    #Tokenize Data
-    train_df.drop('label', axis=1).to_string()
-    test_df.drop('label', axis=1).to_string()
-    tokenizer(text, padding=True, truncation=True, return_tensors="pt")
+    # Function to convert numerical features to text for tokenization
+    def features_to_text(example):
+        features = {k: v for k, v in example.items() if k != 'label'}
+        text = " ".join([f"{key}:{value}" for key, value in features.items()])
+        return {"text": text}
 
-    #Set Training Arguments
-    TrainingArguments(output_dir="backend/models",num_train_epochs=3,per_device_train_batch_size=8, per_device_eval_batch_size=8)
+    # Apply feature conversion
+    train_dataset = train_dataset.map(features_to_text)
+    test_dataset = test_dataset.map(features_to_text)
 
-    #Train the model
-    Trainer(model=model, args=training_args,train_dataset=train_dataset, eval_dataset=test_dataset)
-    triner.train()
-    
-    #Confirm training
+    # Tokenize data
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], padding="max_length", max_length=128, truncation=True, return_tensors="pt")
+
+    train_dataset = train_dataset.map(tokenize_function, batched=True)
+    test_dataset = test_dataset.map(tokenize_function, batched=True)
+
+    # Set format for training
+    train_dataset.set_format("torch", columns=["input_ids", "attention_mask", "label"])
+    test_dataset.set_format("torch", columns=["input_ids", "attention_mask", "label"])
+
+    # Set training arguments
+    training_args = TrainingArguments(
+        output_dir="backend/models",
+        num_train_epochs=3,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        logging_dir="backend/models/logs",
+        logging_steps=100,
+        load_best_model_at_end=True
+    )
+
+    # Initialize trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=test_dataset
+    )
+
+    # Train the model
+    print("Training model...")
+    trainer.train()
+
+    # Evaluate the model
+    print("Evaluating model...")
+    eval_results = trainer.evaluate()
+    print(f"Evaluation results: {eval_results}")
+
+    # Save the model
+    model.save_pretrained("backend/models")
+    tokenizer.save_pretrained("backend/models")
     print("Model training complete, saved to backend/models")
-
-
-
 
 if __name__ == "__main__":
     train_file = "backend/data/preprocessed/train.csv"
-    test_file = "backend/data/preprocessed/test.csv" 
+    test_file = "backend/data/preprocessed/test.csv"
     train_model(train_file, test_file)
