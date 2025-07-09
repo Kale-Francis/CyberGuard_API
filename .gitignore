@@ -139,4 +139,4 @@ dist
 *.csv
 
 # Virtual enviroment
-venv/
+venv/backend/data/*.csv
