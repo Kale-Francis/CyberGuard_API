@@ -1,1 +1,0 @@
-// Kafka producer and consumer configuration for logs topic
