@@ -139,4 +139,8 @@ dist
 *.csv
 
 # Virtual enviroment
-venv/backend/data/*.csv
+venv/
+venv/
+backend/models
+*.pyc
+.env
