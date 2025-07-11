@@ -112,7 +112,7 @@ const consumer = kafka.consumer({ groupId: "cyberguard" });
           twilio.messages.create({
             body: `Anomaly detected: ${JSON.stringify(record)}`,
             from: process.env.TWILIO_PHONE,
-            to: "+254712345678" // Replace with admin phone
+            to: "+254716364090" 
           }).then(() => console.log("Alert sent"));
         }
         Prediction.create({ record, prediction });
