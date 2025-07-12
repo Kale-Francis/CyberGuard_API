@@ -5,7 +5,8 @@ const { Kafka } = require("kafkajs");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const twilio = require("twilio")(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+const twilio = require("twilio");
+const client = new twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const swaggerUi = require("swagger-ui-express");
 const cors = require("cors");
 
@@ -13,7 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 
 // MongoDB Setup
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -75,7 +76,7 @@ app.get("/anomalies", authenticate, async (req, res) => {
 });
 
 app.post("/predict", (req, res) => {
-  const options = { pythonPath: "venv/bin/python3", args: [JSON.stringify(req.body)] };
+  const options = { pythonPath: "/home/nexon/Desktop/School/CyberGuard_API/venv/bin/python3", args: [JSON.stringify(req.body)] };
   PythonShell.run("scripts/inference.py", options, (err, results) => {
     if (err) throw err;
     res.json(JSON.parse(results[0]));
@@ -104,7 +105,7 @@ const consumer = kafka.consumer({ groupId: "cyberguard" });
   await consumer.run({
     eachMessage: async ({ message }) => {
       const record = JSON.parse(message.value.toString());
-      const options = { pythonPath: "venv/bin/python3", args: [JSON.stringify(record)] };
+      const options = { pythonPath: "/home/nexon/Desktop/School/CyberGuard_API/venv/bin/python3", args: [JSON.stringify(record)] };
       PythonShell.run("scripts/inference.py", options, (err, results) => {
         if (err) throw err;
         const prediction = JSON.parse(results[0]).prediction;
