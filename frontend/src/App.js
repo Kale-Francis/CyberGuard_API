@@ -7,18 +7,18 @@ function App() {
   const [log, setLog] = useState({ ip: "", port: "", protocol: "" });
 
   const login = async () => {
-    const res = await axios.post("http://localhost:3000/login", { email: "admin@example.com", password: "your_password" });
+    const res = await axios.post("http://localhost:4000/login", { email: "admin@example.com", password: "your_password" });
     localStorage.setItem("token", res.data.token);
     setToken(res.data.token);
   };
 
   const ingestLog = async () => {
-    await axios.post("http://localhost:3000/logs", log, { headers: { Authorization: `Bearer ${token}` } });
+    await axios.post("http://localhost:4000/logs", log, { headers: { Authorization: `Bearer ${token}` } });
     alert("Log ingested");
   };
 
   const fetchAnomalies = async () => {
-    const res = await axios.get("http://localhost:3000/anomalies", { headers: { Authorization: `Bearer ${token}` } });
+    const res = await axios.get("http://localhost:4000/anomalies", { headers: { Authorization: `Bearer ${token}` } });
     setAnomalies(res.data);
   };
 
