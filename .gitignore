@@ -141,6 +141,5 @@ dist
 # Virtual enviroment
 venv/
 venv/
-backend/models
 *.pyc
 .env
